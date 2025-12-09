@@ -1,27 +1,68 @@
+#include <HTTPClient.h>
+#include <WiFi.h>
+
+#include <string>
+
 #include "DHT.h"
 
+// WIFI
+const char* ssid = "SSID";
+const char* pass = "PASSW";
 
-// PINES
+// SENTILO
+const String baseUrl = "http://147.83.83.21:8081/data/grup_3-102@provider";
+const String IDENTITY_KEY =
+    "e15a0aaa8d84c9bf7087e31fce2e23bc1fa3f8a64ce65914203a6648cb5df9fe";
+
+// SENSORS
 #define DHTPIN 14
 #define DHTTYPE DHT22
-
 #define LDRPIN 34
 #define KYPIN_DO 32
 
-// MUESTREO
-const unsigned long SAMPLE_INTERVAL = 5000; // ms
-
 DHT dht(DHTPIN, DHTTYPE);
+
+const unsigned long SAMPLE_INTERVAL = 5000;
 unsigned long lastSample = 0;
 
 void setup() {
     Serial.begin(115200);
     delay(500);
 
-    dht.begin();
-    delay(2000);
+    WiFi.begin(ssid, pass);
+    Serial.print("Connecting to WiFi...");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("\nConnected!");
 
-    Serial.println("Modo solo terminal iniciado.");
+    dht.begin();
+}
+
+void enviaASentilo(String sensor, float valor) {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi not connected");
+        return;
+    }
+
+    HTTPClient http;
+
+    String url = baseUrl + "/" + sensor + "/" + String(valor);
+    http.begin(url);
+    http.addHeader("IDENTITY_KEY", IDENTITY_KEY);
+
+    int httpCode = http.PUT("");  // Sending PUT request
+
+    Serial.printf("Sentilo (%s) → HTTP %d\n", sensor.c_str(), httpCode);
+
+    if (httpCode == 200) {
+        Serial.print("code 200 Success");
+    } else {
+        Serial.print("code error");
+    }
+
+    http.end();
 }
 
 void loop() {
@@ -29,27 +70,31 @@ void loop() {
     if (now - lastSample < SAMPLE_INTERVAL) return;
     lastSample = now;
 
-    // --- TEMPERATURA / HUMEDAD ---
+    // --- READINGS ---
     float hum = dht.readHumidity();
     float temp = dht.readTemperature();
 
     if (isnan(hum) || isnan(temp)) {
-        hum = dht.readHumidity();
-        temp = dht.readTemperature();
+        Serial.println("Failed to read from DHT sensor!");
+        return;
     }
 
-    // --- LUZ ---
     int rawLdr = analogRead(LDRPIN);
-    float lightPercent = (1.0 - (rawLdr / 4095.0)) * 100.0;
+    float lightPercent = (1.0 - rawLdr / 4095.0) * 100.0;
 
-    // --- SONIDO (RMS) ---
-    int estado = digitalRead(KYPIN_DO); // 1 = hay ruido, 0 = silencio
+    int estatSoroll = digitalRead(KYPIN_DO);
 
-    // --- MOSTRAR EN TERMINAL ---
-    Serial.println("=====================================");
-    Serial.printf("Temperatura: %.2f °C\n", temp);
-    Serial.printf("Humedad: %.2f %%\n", hum);
-    Serial.printf("Luz: %.2f %%\n", lightPercent);
-    Serial.printf("Ruido: %d\n", estado);
-    Serial.println("=====================================\n");
+    // Enviar a sentilo
+    enviaASentilo("temperature", temp);
+    enviaASentilo("humidity", hum);
+    enviaASentilo("lighting", lightPercent);
+    enviaASentilo("sound", estatSoroll);
+
+    // Mostrar per serial
+    Serial.println("==============================");
+    Serial.printf("Temp: %.2f\n", temp);
+    Serial.printf("Hum: %.2f\n", hum);
+    Serial.printf("Llum: %.2f\n", lightPercent);
+    Serial.printf("Soroll: %d\n", estatSoroll);
+    Serial.println("==============================\n");
 }
