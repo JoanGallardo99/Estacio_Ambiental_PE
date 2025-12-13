@@ -12,7 +12,7 @@ const char* pass = "PASSW";
 // SENTILO
 const String baseUrl = "http://147.83.83.21:8081/data/grup_3-102@provider";
 const String IDENTITY_KEY =
-    "e15a0aaa8d84c9bf7087e31fce2e23bc1fa3f8a64ce65914203a6648cb5df9fe";
+    "61b39a9081e1ab55fedb391e10778cadcd8cedcbf98810e91ce6aa2ce70925f9";
 
 // SENSORS
 #define DHTPIN 14
@@ -82,19 +82,16 @@ void loop() {
     int rawLdr = analogRead(LDRPIN);
     float lightPercent = (1.0 - rawLdr / 4095.0) * 100.0;
 
-    int estatSoroll = digitalRead(KYPIN_DO);
 
     // Enviar a sentilo
     enviaASentilo("temperature", temp);
     enviaASentilo("humidity", hum);
     enviaASentilo("lighting", lightPercent);
-    enviaASentilo("sound", estatSoroll);
 
     // Mostrar per serial
     Serial.println("==============================");
     Serial.printf("Temp: %.2f\n", temp);
     Serial.printf("Hum: %.2f\n", hum);
     Serial.printf("Llum: %.2f\n", lightPercent);
-    Serial.printf("Soroll: %d\n", estatSoroll);
     Serial.println("==============================\n");
 }
