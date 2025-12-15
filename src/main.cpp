@@ -7,7 +7,7 @@
 
 // WIFI
 const char* ssid = "SSID";
-const char* pass = "PASSW";
+const char* pass = "PASS";
 
 // SENTILO
 const String baseUrl = "http://147.83.83.21:8081/data/grup_3-102@provider";
@@ -18,7 +18,8 @@ const String IDENTITY_KEY =
 #define DHTPIN 14
 #define DHTTYPE DHT22
 #define LDRPIN 34
-#define KYPIN_DO 32
+#define LED_VERD 25
+#define LED_VERMELL 26
 
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -38,7 +39,24 @@ void setup() {
     Serial.println("\nConnected!");
 
     dht.begin();
+
+    pinMode(LED_VERD, OUTPUT);
+    pinMode(LED_VERMELL, OUTPUT);
+
+    //Estat inicial
+    digitalWrite(LED_VERD, LOW);
+    digitalWrite(LED_VERMELL, HIGH);
 }
+
+bool aulaOK(float temp, float hum, float luz) 
+{
+  bool tempOK  = (temp >= 20.0 && temp <= 25.0);
+  bool humOK   = (hum  >= 30.0 && hum  <= 70.0);
+  bool luzOK   = (luz  >= 40.0);
+
+  return tempOK && humOK && luzOK;
+}
+
 
 void enviaASentilo(String sensor, float valor) {
     if (WiFi.status() != WL_CONNECTED) {
@@ -81,6 +99,19 @@ void loop() {
 
     int rawLdr = analogRead(LDRPIN);
     float lightPercent = (1.0 - rawLdr / 4095.0) * 100.0;
+
+    bool aula = aulaOK(temp, hum, lightPercent);
+
+    if (aula) 
+    {
+        digitalWrite(LED_VERD, HIGH);
+        digitalWrite(LED_VERMELL, LOW);
+    } 
+    else 
+    {
+        digitalWrite(LED_VERD, LOW);
+        digitalWrite(LED_VERMELL, HIGH);
+    }
 
 
     // Enviar a sentilo
