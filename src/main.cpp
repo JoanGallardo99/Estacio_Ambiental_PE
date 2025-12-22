@@ -23,13 +23,12 @@ const String IDENTITY_KEY =
 
 DHT dht(DHTPIN, DHTTYPE);
 
-const unsigned long SAMPLE_INTERVAL = 5000;
-unsigned long lastSample = 0;
-
-void setup() {
-    Serial.begin(115200);
+void setup() 
+{
+    Serial.begin(115200); // Inicialització Serial
     delay(500);
 
+    // Connexió WiFi  
     WiFi.begin(ssid, pass);
     Serial.print("Connecting to WiFi...");
     while (WiFi.status() != WL_CONNECTED) {
@@ -38,6 +37,7 @@ void setup() {
     }
     Serial.println("\nConnected!");
 
+    // Inicialització sensors
     dht.begin();
 
     pinMode(LED_VERD, OUTPUT);
@@ -58,8 +58,11 @@ bool aulaOK(float temp, float hum, float luz)
 }
 
 
-void enviaASentilo(String sensor, float valor) {
-    if (WiFi.status() != WL_CONNECTED) {
+void enviaASentilo(String sensor, float valor) 
+{
+    // Comprovació WiFi
+    if (WiFi.status() != WL_CONNECTED) 
+    {
         Serial.println("WiFi not connected");
         return;
     }
@@ -70,44 +73,46 @@ void enviaASentilo(String sensor, float valor) {
     http.begin(url);
     http.addHeader("IDENTITY_KEY", IDENTITY_KEY);
 
-    int httpCode = http.PUT("");  // Sending PUT request
+    int httpCode = http.PUT("");  // Enviar una request PUT
 
     Serial.printf("Sentilo (%s) → HTTP %d\n", sensor.c_str(), httpCode);
 
-    if (httpCode == 200) {
-        Serial.print("code 200 Success");
-    } else {
-        Serial.print("code error");
+    if (httpCode == 200) 
+    {
+        Serial.printf("code 200 Success\n"); // Codi tot OK
+    } 
+    else 
+    {
+        Serial.printf("code error\n"); // Codi error
     }
 
     http.end();
 }
 
-void loop() {
-    unsigned long now = millis();
-    if (now - lastSample < SAMPLE_INTERVAL) return;
-    lastSample = now;
-
-    // --- READINGS ---
+void loop() 
+{
+    // Lectura sensors
     float hum = dht.readHumidity();
     float temp = dht.readTemperature();
 
-    if (isnan(hum) || isnan(temp)) {
-        Serial.println("Failed to read from DHT sensor!");
+    if (isnan(hum) || isnan(temp)) // COmprovació de dades
+    {
+        Serial.println("No es pot llegir el sensor DHT22!");
         return;
     }
 
     int rawLdr = analogRead(LDRPIN);
-    float lightPercent = (1.0 - rawLdr / 4095.0) * 100.0;
+    float lightPercent = (1.0 - rawLdr / 4095.0) * 100.0; // Normalització lectura llum
 
+    // Lògica de confort
     bool aula = aulaOK(temp, hum, lightPercent);
 
-    if (aula) 
+    if (aula) //Condicions OK
     {
         digitalWrite(LED_VERD, HIGH);
         digitalWrite(LED_VERMELL, LOW);
     } 
-    else 
+    else // Fora de rang
     {
         digitalWrite(LED_VERD, LOW);
         digitalWrite(LED_VERMELL, HIGH);
